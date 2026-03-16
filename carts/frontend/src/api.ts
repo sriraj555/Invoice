@@ -1,5 +1,24 @@
 import { API_BASE } from "./config";
 
+export interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  currency: string;
+  stock: number;
+  sku?: string;
+}
+
+export async function getProducts(): Promise<Product[]> {
+  const res = await fetch(`${API_BASE}/products`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
 export interface Cart {
   id: string;
   userId: string;
@@ -75,4 +94,40 @@ export async function clearCart(cartId: string): Promise<void> {
     const err = await res.json().catch(() => ({}));
     throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
   }
+}
+
+export interface CreateOrderPayload {
+  userId: string;
+  cartId: string;
+  items: Array<{ productId: string; quantity: number; price: number; name: string }>;
+  totalAmount: number;
+  currency: string;
+}
+
+export interface Order {
+  id: string;
+  status: string;
+}
+
+export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
+  return fetchApi<Order>("/orders", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export async function validatePayment(orderId: string, amount: number, currency: string, cartId?: string): Promise<{ valid: boolean }> {
+  return fetchApi("/payments/validate", {
+    method: "POST",
+    body: JSON.stringify({ orderId, amount, currency, ...(cartId && { cartId }) }),
+  });
+}
+
+export async function processPayment(
+  orderId: string,
+  amount: number,
+  currency: string,
+  cartId?: string
+): Promise<{ id: string; status: string; orderConfirmed?: boolean }> {
+  return fetchApi("/payments", {
+    method: "POST",
+    body: JSON.stringify({ orderId, amount, currency, ...(cartId && { cartId }) }),
+  });
 }

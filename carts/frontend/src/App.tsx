@@ -6,8 +6,13 @@ import {
   addToCart,
   removeFromCart,
   applyDiscount,
+  getProducts,
+  createOrder,
+  validatePayment,
+  processPayment,
   type Cart,
   type CartSummary,
+  type Product,
 } from "./api";
 import "./index.css";
 
@@ -17,11 +22,14 @@ export default function App() {
   const [cartId, setCartId] = useState<string | null>(null);
   const [cart, setCart] = useState<(Cart & { subtotal?: number; total?: number }) | null>(null);
   const [summary, setSummary] = useState<CartSummary | null>(null);
-  const [productId, setProductId] = useState("p1");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [productId, setProductId] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [discountCode, setDiscountCode] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [paying, setPaying] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState<{ orderId: string } | null>(null);
 
   const loadCart = async () => {
     let cid = cartId;
@@ -36,8 +44,21 @@ export default function App() {
   };
 
   useEffect(() => {
+    getProducts()
+      .then((list) => {
+        setProducts(list);
+        if (list.length && !productId) setProductId(list[0].id);
+      })
+      .catch(() => setProducts([]));
+  }, []);
+
+  useEffect(() => {
     loadCart().catch((e) => setError(e instanceof Error ? e.message : "Failed")).finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (products.length && !productId) setProductId(products[0].id);
+  }, [products]);
 
   const handleAdd = async () => {
     if (!cartId) return;
@@ -72,6 +93,48 @@ export default function App() {
     }
   };
 
+  const handleCheckoutAndPay = async () => {
+    if (!cartId || !cart || !summary || cart.items.length === 0) {
+      setError("Cart is empty. Add items first.");
+      return;
+    }
+    setError(null);
+    setPaymentSuccess(null);
+    setPaying(true);
+    try {
+      const orderItems = cart.items.map((i) => ({
+        productId: i.productId,
+        quantity: i.quantity,
+        price: i.price ?? 0,
+        name: (i.name ?? i.productId).trim() || i.productId,
+      }));
+      const order = await createOrder({
+        userId: USER_ID,
+        cartId,
+        items: orderItems,
+        totalAmount: summary.total,
+        currency: "USD",
+      });
+      const valid = await validatePayment(order.id, summary.total, "USD", cartId);
+      if (!valid.valid) {
+        setError("Payment validation failed. Amount may not match cart total.");
+        setPaying(false);
+        return;
+      }
+      const payment = await processPayment(order.id, summary.total, "USD", cartId);
+      if (payment.status === "succeeded" || payment.status === "paid") {
+        setPaymentSuccess({ orderId: order.id });
+        await loadCart();
+      } else {
+        setError("Payment did not complete.");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Checkout failed");
+    } finally {
+      setPaying(false);
+    }
+  };
+
   if (loading) return <div className="app"><p>Loading...</p></div>;
 
   return (
@@ -86,15 +149,19 @@ export default function App() {
       <div className="card">
         <h2>Add item</h2>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "flex-end" }}>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Product ID</label>
-            <input value={productId} onChange={(e) => setProductId(e.target.value)} placeholder="p1 or p2" />
+          <div className="form-group" style={{ marginBottom: 0, minWidth: "200px" }}>
+            <label>Product</label>
+            <select value={productId} onChange={(e) => setProductId(e.target.value)}>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>{p.name} (ID: {p.id})</option>
+              ))}
+            </select>
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label>Quantity</label>
             <input type="number" min={1} value={quantity} onChange={(e) => setQuantity(Number(e.target.value) || 1)} style={{ width: "80px" }} />
           </div>
-          <button onClick={handleAdd}>Add to cart</button>
+          <button onClick={handleAdd} disabled={!productId}>Add to cart</button>
         </div>
       </div>
 
@@ -115,6 +182,24 @@ export default function App() {
         <div className="card">
           <h2>Cart summary</h2>
           <p>Items: {summary.itemCount} | Subtotal: USD {summary.subtotal.toFixed(2)} | Total: USD {summary.total.toFixed(2)}</p>
+          {summary.itemCount > 0 && (
+            <button
+              type="button"
+              className="btn-checkout"
+              onClick={handleCheckoutAndPay}
+              disabled={paying}
+            >
+              {paying ? "Processing…" : "Checkout & Pay"}
+            </button>
+          )}
+        </div>
+      )}
+
+      {paymentSuccess && (
+        <div className="card success-card">
+          <h2>Payment successful</h2>
+          <p className="success">Order ID: <strong>{paymentSuccess.orderId}</strong></p>
+          <p>Your cart has been cleared. You can get an invoice in the <a href="http://localhost:3015" target="_blank" rel="noopener noreferrer">Invoices UI (3015)</a> using this order ID.</p>
         </div>
       )}
 
@@ -133,7 +218,7 @@ export default function App() {
       )}
 
       {cart && cart.items.length === 0 && summary?.itemCount === 0 && (
-        <p className="card">Cart is empty. Add items above (use product IDs from Product Catalog, e.g. p1, p2).</p>
+        <p className="card">Cart is empty. Select a product above and add to cart.</p>
       )}
     </div>
   );

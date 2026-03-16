@@ -12,35 +12,46 @@ export default function App() {
   const [statusResult, setStatusResult] = useState<{ paymentId: string; orderId: string; status: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleValidate = async () => {
-    setError(null);
-    setResult(null);
+  const validateInputs = (): number | null => {
+    if (!orderId.trim()) {
+      setError("Order ID is required. Create an order in Orders UI (port 3013) first.");
+      return null;
+    }
     const amt = parseFloat(amount);
     if (isNaN(amt) || amt <= 0) {
-      setError("Enter a valid amount");
-      return;
+      setError("Enter a valid positive amount (e.g. 10.00).");
+      return null;
     }
+    const curr = (currency || "USD").trim().toUpperCase();
+    if (curr.length !== 3) {
+      setError("Currency must be 3 letters (e.g. USD).");
+      return null;
+    }
+    setError(null);
+    return amt;
+  };
+
+  const handleValidate = async () => {
+    setResult(null);
+    const amt = validateInputs();
+    if (amt === null) return;
     try {
-      const r = await validatePayment(orderId.trim(), amt, currency, cartId.trim() || undefined);
+      const r = await validatePayment(orderId.trim(), amt, (currency || "USD").trim().toUpperCase(), cartId.trim() || undefined);
       setResult(r.valid ? "Valid" : "Invalid");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed");
+      setError(e instanceof Error ? e.message : "Validation failed");
     }
   };
 
   const handleProcess = async () => {
-    setError(null);
     setResult(null);
-    const amt = parseFloat(amount);
-    if (isNaN(amt) || amt <= 0) {
-      setError("Enter a valid amount");
-      return;
-    }
+    const amt = validateInputs();
+    if (amt === null) return;
     try {
-      const r = await processPayment(orderId.trim(), amt, currency, cartId.trim() || undefined);
+      const r = await processPayment(orderId.trim(), amt, (currency || "USD").trim().toUpperCase(), cartId.trim() || undefined);
       setResult(`Payment ${r.status}. ID: ${r.id}. Order confirmed: ${r.orderConfirmed ?? false}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed");
+      setError(e instanceof Error ? e.message : "Payment failed");
     }
   };
 
@@ -63,6 +74,9 @@ export default function App() {
     <div className="app">
       <h1>Payment Processing & Validation</h1>
       <p className="card">Service: Payments API – validate payment details, process transactions, check status.</p>
+      <p className="card" style={{ fontSize: "0.9rem", color: "#94a3b8" }}>
+        Use an <strong>Order ID</strong> from the Orders UI (<a href="http://localhost:3013" target="_blank" rel="noopener noreferrer">port 3013</a>). Create an order there first, then enter that Order ID and the order total here. Optionally add Cart ID to validate amount against cart total.
+      </p>
 
       <div className="card">
         <h2>Validate payment</h2>
@@ -75,8 +89,8 @@ export default function App() {
           <input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
         </div>
         <div className="form-group">
-          <label>Currency</label>
-          <input value={currency} onChange={(e) => setCurrency(e.target.value)} placeholder="USD" />
+          <label>Currency (3 letters)</label>
+          <input value={currency} onChange={(e) => setCurrency(e.target.value)} placeholder="USD" maxLength={3} style={{ width: "5rem" }} />
         </div>
         <div className="form-group">
           <label>Cart ID (optional – validate against cart total)</label>

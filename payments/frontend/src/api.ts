@@ -10,14 +10,31 @@ export interface Payment {
   updatedAt: string;
 }
 
+interface ApiErrorBody {
+  message?: string;
+  errors?: { fieldErrors?: Record<string, string[]> };
+  cartTotal?: number;
+}
+
+function buildErrorMessage(res: Response, err: ApiErrorBody): string {
+  const msg = err.message ?? `HTTP ${res.status}`;
+  if (err.cartTotal !== undefined) return `${msg} (cart total: ${err.cartTotal})`;
+  const fieldErrors = err.errors?.fieldErrors;
+  if (fieldErrors && Object.keys(fieldErrors).length) {
+    const parts = Object.entries(fieldErrors).map(([k, v]) => `${k}: ${(v ?? []).join(", ")}`);
+    return `${msg}: ${parts.join("; ")}`;
+  }
+  return msg;
+}
+
 async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: { "Content-Type": "application/json", ...options?.headers },
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
+    const err = (await res.json().catch(() => ({}))) as ApiErrorBody;
+    throw new Error(buildErrorMessage(res, err));
   }
   return res.json();
 }

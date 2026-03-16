@@ -7,11 +7,19 @@ h1 { margin-top: 0; }
 button { cursor: pointer; background: #2563eb; color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 6px; }
 button:hover { background: #1d4ed8; }
 button:disabled { opacity: 0.6; cursor: not-allowed; }
-input { padding: 0.5rem; border-radius: 6px; border: 1px solid #475569; background: #1e293b; color: #e2e8f0; width: 100%; }
+input, select { padding: 0.5rem; border-radius: 6px; border: 1px solid #475569; background: #1e293b; color: #e2e8f0; }
+input { width: 100%; }
+select { cursor: pointer; min-width: 120px; }
 label { display: block; margin-bottom: 0.25rem; color: #94a3b8; }
 .error { color: #f87171; }
 .success { color: #4ade80; }
 .form-group { margin-bottom: 1rem; }
+.form-row { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: flex-end; }
+.form-row-items { margin-bottom: 0.5rem; align-items: center; }
+.form-row-items input { width: auto; }
+.link-btn { background: transparent; color: #38bdf8; text-decoration: underline; padding: 0; }
+.link-btn:hover { background: transparent; color: #7dd3fc; }
+a { color: #38bdf8; }
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #334155; }
 th { color: #94a3b8; }

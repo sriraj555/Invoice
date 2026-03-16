@@ -1,5 +1,24 @@
 import { API_BASE } from "./config";
 
+export interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  currency: string;
+  stock: number;
+  sku?: string;
+}
+
+export async function getProducts(): Promise<Product[]> {
+  const res = await fetch(`${API_BASE}/products`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
 export interface Order {
   id: string;
   userId: string;

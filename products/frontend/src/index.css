@@ -13,4 +13,12 @@ label { display: block; margin-bottom: 0.25rem; color: #94a3b8; }
 .error { color: #f87171; }
 .success { color: #4ade80; }
 .form-group { margin-bottom: 1rem; }
+.form-row { display: flex; gap: 1rem; flex-wrap: wrap; }
 .badge { background: #2563eb; color: #fff; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.85rem; }
+.product-card { min-width: 0; }
+.product-id { font-size: 0.85rem; color: #94a3b8; margin: 0 0 0.25rem; }
+.product-id code { background: #334155; padding: 0.15rem 0.4rem; border-radius: 4px; }
+select { padding: 0.5rem; border-radius: 6px; border: 1px solid #475569; background: #1e293b; color: #e2e8f0; width: 100%; cursor: pointer; }
+.btn-danger { background: #dc2626; }
+.btn-danger:hover { background: #b91c1c; }
+a { color: #38bdf8; }

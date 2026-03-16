@@ -27,8 +27,16 @@ function Ensure-Install {
   $nodeModules = Join-Path $fullPath "node_modules"
   if (-not (Test-Path $nodeModules)) {
     Write-Host "Installing dependencies in $Dir..."
+    $pkg = Join-Path $fullPath "package.json"
+    if (-not (Test-Path $pkg)) {
+      Write-Warning "No package.json in $Dir - skipping npm install"
+      return
+    }
     Push-Location $fullPath
-    try { npm install 2>&1 | Out-Null } finally { Pop-Location }
+    try {
+      $proc = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "npm", "install" -WorkingDirectory $fullPath -Wait -PassThru -NoNewWindow
+      if ($proc.ExitCode -ne 0) { Write-Warning "npm install in $Dir exited with $($proc.ExitCode)" }
+    } finally { Pop-Location }
   }
 }
 

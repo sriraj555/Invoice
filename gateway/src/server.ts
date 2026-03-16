@@ -29,10 +29,31 @@ async function proxy(
   }
   try {
     const response = await fetch(url, init);
-    const text = await response.text();
-    res.status(response.status).setHeader("Content-Type", response.headers.get("Content-Type") ?? "application/json");
-    res.send(text);
+    const contentType = response.headers.get("Content-Type") ?? "application/json";
+    
+    res.status(response.status);
+    res.setHeader("Content-Type", contentType);
+    
+    // Copy relevant headers
+    const disposition = response.headers.get("Content-Disposition");
+    if (disposition) res.setHeader("Content-Disposition", disposition);
+    
+    const cacheControl = response.headers.get("Cache-Control");
+    if (cacheControl) res.setHeader("Cache-Control", cacheControl);
+    
+    if (contentType.includes("application/pdf") || contentType.startsWith("application/octet-stream")) {
+      console.log('Proxying PDF response, content-type:', contentType);
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      console.log('PDF buffer size:', buffer.length);
+      res.setHeader("Content-Length", String(buffer.length));
+      res.send(buffer);
+    } else {
+      const text = await response.text();
+      res.send(text);
+    }
   } catch (err) {
+    console.error('Gateway proxy error:', err);
     res.status(502).json({ message: "Bad Gateway", error: String(err) });
   }
 }
