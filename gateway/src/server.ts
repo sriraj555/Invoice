@@ -58,7 +58,7 @@ async function proxy(
   }
 }
 
-const app = express();
+export const app = express();
 app.use(cors());
 app.use(express.json());
 
@@ -87,6 +87,8 @@ app.use((req: Request, res: Response, next: () => void) => {
 
 app.use((_req, res) => res.status(404).json({ message: "Not found" }));
 
-app.listen(PORT, () =>
-  console.log(`Gateway http://localhost:${PORT}`)
-);
+if (!process.env.LAMBDA_TASK_ROOT) {
+  app.listen(PORT, () =>
+    console.log(`Gateway http://localhost:${PORT}`)
+  );
+}
