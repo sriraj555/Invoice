@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getOrders, getOrder, createOrder, updateOrderStatus, getProducts, type Order, type Product } from "./api";
+import { getOrders, getOrder, createOrder, updateOrderStatus, getProducts, validateCountry, type Order, type Product, type CountryInfo } from "./api";
 import "./index.css";
 
 const emptyItem = () => ({ productId: "", quantity: 1, price: 0, name: "" });
@@ -18,6 +18,9 @@ export default function App() {
   const [createTotal, setCreateTotal] = useState("");
   const [createCurrency, setCreateCurrency] = useState("USD");
   const [creating, setCreating] = useState(false);
+  const [countryCode, setCountryCode] = useState("");
+  const [countryInfo, setCountryInfo] = useState<CountryInfo | null>(null);
+  const [countryLoading, setCountryLoading] = useState(false);
 
   useEffect(() => {
     getProducts().then(setProducts).catch(() => setProducts([]));
@@ -58,7 +61,7 @@ export default function App() {
 
   const addCreateItem = () => setCreateItems((prev) => [...prev, { ...emptyItem() }]);
   const removeCreateItem = (i: number) => setCreateItems((prev) => prev.filter((_, idx) => idx !== i));
-  const updateCreateItem = (i: number, field: keyof typeof emptyItem, value: string | number) => {
+  const updateCreateItem = (i: number, field: keyof ReturnType<typeof emptyItem>, value: string | number) => {
     setCreateItems((prev) => prev.map((item, idx) => (idx === i ? { ...item, [field]: value } : item)));
   };
   const selectProductForItem = (i: number, product: Product) => {
@@ -179,6 +182,48 @@ export default function App() {
           </div>
           <button type="button" onClick={handleLookup}>Look up</button>
         </div>
+      </div>
+
+      <div className="card">
+        <h2>Validate shipping country</h2>
+        <p style={{ fontSize: "0.85rem", color: "#94a3b8", marginTop: 0 }}>
+          Uses <strong>REST Countries API</strong> to validate a country code and get details (currency, region, languages).
+        </p>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end" }}>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label>Country code (e.g. US, IE, IN, DE)</label>
+            <input value={countryCode} onChange={(e) => setCountryCode(e.target.value)} placeholder="US" style={{ width: "5rem" }} maxLength={3} />
+          </div>
+          <button
+            type="button"
+            disabled={countryLoading || !countryCode.trim()}
+            onClick={async () => {
+              setCountryLoading(true);
+              setCountryInfo(null);
+              setError(null);
+              try {
+                const info = await validateCountry(countryCode.trim());
+                setCountryInfo(info);
+              } catch (e) {
+                setError(e instanceof Error ? e.message : "Invalid country code");
+              } finally {
+                setCountryLoading(false);
+              }
+            }}
+          >
+            {countryLoading ? "Checking…" : "Validate"}
+          </button>
+        </div>
+        {countryInfo && countryInfo.valid && (
+          <div style={{ marginTop: "0.75rem", fontSize: "0.9rem" }}>
+            <p><strong>{countryInfo.flag} {countryInfo.country}</strong> ({countryInfo.officialName})</p>
+            <p>Capital: {countryInfo.capital.join(", ") || "N/A"} | Region: {countryInfo.region} / {countryInfo.subregion}</p>
+            <p>Currencies: {Object.entries(countryInfo.currencies).map(([, c]) => `${c.name} (${c.symbol})`).join(", ")}</p>
+            <p>Languages: {Object.values(countryInfo.languages).join(", ")}</p>
+            <p>Population: {countryInfo.population.toLocaleString()} | Timezones: {countryInfo.timezones.join(", ")}</p>
+            <p className="success" style={{ fontSize: "0.85rem" }}>Valid shipping destination (via REST Countries API)</p>
+          </div>
+        )}
       </div>
 
       {selectedOrder && (

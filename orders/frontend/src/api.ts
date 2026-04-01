@@ -72,3 +72,23 @@ export async function updateOrderStatus(orderId: string, status: Order["status"]
     body: JSON.stringify({ status }),
   });
 }
+
+// --- REST Countries Public API ---
+export interface CountryInfo {
+  valid: boolean;
+  code: string;
+  country: string;
+  officialName: string;
+  capital: string[];
+  region: string;
+  subregion: string;
+  currencies: Record<string, { name: string; symbol: string }>;
+  languages: Record<string, string>;
+  population: number;
+  flag: string;
+  timezones: string[];
+}
+
+export async function validateCountry(code: string): Promise<CountryInfo> {
+  return fetchApi<CountryInfo>(`/orders/validate-country/${encodeURIComponent(code)}`);
+}

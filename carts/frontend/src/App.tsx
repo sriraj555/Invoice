@@ -10,6 +10,7 @@ import {
   createOrder,
   validatePayment,
   processPayment,
+  convertCartCurrency,
   type Cart,
   type CartSummary,
   type Product,
@@ -30,6 +31,8 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState<{ orderId: string } | null>(null);
+  const [converted, setConverted] = useState<Record<string, number> | null>(null);
+  const [converting, setConverting] = useState(false);
 
   const loadCart = async () => {
     let cid = cartId;
@@ -183,14 +186,47 @@ export default function App() {
           <h2>Cart summary</h2>
           <p>Items: {summary.itemCount} | Subtotal: USD {summary.subtotal.toFixed(2)} | Total: USD {summary.total.toFixed(2)}</p>
           {summary.itemCount > 0 && (
-            <button
-              type="button"
-              className="btn-checkout"
-              onClick={handleCheckoutAndPay}
-              disabled={paying}
-            >
-              {paying ? "Processing…" : "Checkout & Pay"}
-            </button>
+            <>
+              <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem" }}>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!cartId) return;
+                    setConverting(true);
+                    setConverted(null);
+                    try {
+                      const r = await convertCartCurrency(cartId, "EUR,GBP,JPY,INR");
+                      setConverted(r.converted);
+                    } catch (e) {
+                      setError(e instanceof Error ? e.message : "Conversion failed");
+                    } finally {
+                      setConverting(false);
+                    }
+                  }}
+                  disabled={converting}
+                >
+                  {converting ? "Converting…" : "Show in other currencies"}
+                </button>
+              </div>
+              {converted && (
+                <div style={{ marginBottom: "0.75rem", fontSize: "0.9rem", color: "#94a3b8" }}>
+                  {Object.entries(converted).map(([cur, val]) => (
+                    <span key={cur} style={{ marginRight: "1rem" }}>
+                      <strong>{cur}</strong> {val.toFixed(2)}
+                    </span>
+                  ))}
+                  <span style={{ fontSize: "0.8rem", color: "#64748b" }}>(via Frankfurter API)</span>
+                </div>
+              )}
+              <button
+                type="button"
+                className="btn-checkout"
+                onClick={handleCheckoutAndPay}
+                disabled={paying}
+              >
+                {paying ? "Processing…" : "Checkout & Pay"}
+              </button>
+            </>
           )}
         </div>
       )}

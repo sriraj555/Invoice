@@ -11,6 +11,30 @@ export async function fetchProduct(productId: string): Promise<Product | null> {
   }
 }
 
+// --- Public API: Frankfurter Currency Conversion ---
+export interface ConvertedAmounts {
+  base: string;
+  amount: number;
+  rates: Record<string, number>;
+}
+
+export async function convertCurrency(
+  amount: number,
+  from: string,
+  to: string[]
+): Promise<ConvertedAmounts | null> {
+  try {
+    const targets = to.join(",");
+    const url = `https://api.frankfurter.dev/latest?amount=${amount}&from=${from.toUpperCase()}&to=${targets}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = (await res.json()) as { base: string; amount: number; rates: Record<string, number> };
+    return { base: data.base, amount: data.amount, rates: data.rates };
+  } catch {
+    return null;
+  }
+}
+
 export async function validatePaymentForCheckout(
   orderId: string,
   amount: number,

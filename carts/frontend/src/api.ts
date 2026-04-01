@@ -96,6 +96,18 @@ export async function clearCart(cartId: string): Promise<void> {
   }
 }
 
+// --- Currency Conversion (Frankfurter Public API) ---
+export interface ConvertResult {
+  cartId: string;
+  total: number;
+  currency: string;
+  converted: Record<string, number>;
+}
+
+export async function convertCartCurrency(cartId: string, to: string): Promise<ConvertResult> {
+  return fetchApi<ConvertResult>(`/cart/${encodeURIComponent(cartId)}/convert?to=${encodeURIComponent(to)}`);
+}
+
 export interface CreateOrderPayload {
   userId: string;
   cartId: string;

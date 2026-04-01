@@ -16,6 +16,7 @@ import {
   validateStock,
   sendOrderConfirmationEmail,
   validatePaymentAmount,
+  lookupCountry,
 } from "./service";
 import { sendOrderEvent } from "./sqsClient";
 
@@ -122,6 +123,34 @@ router.post("/orders/:orderId/confirm-payment", async (req: Request, res: Respon
   }
   const final = getOrder(updated.id);
   res.json(final ?? updated);
+});
+
+// Validate shipping country using REST Countries public API
+router.get("/orders/validate-country/:code", async (req: Request, res: Response) => {
+  const code = req.params.code.trim();
+  if (!code || code.length < 2 || code.length > 3) {
+    res.status(400).json({ message: "Provide a 2 or 3-letter country code (e.g. US, IE, IN)" });
+    return;
+  }
+  const country = await lookupCountry(code);
+  if (!country) {
+    res.status(404).json({ valid: false, message: `Country not found for code: ${code}` });
+    return;
+  }
+  res.json({
+    valid: true,
+    code: code.toUpperCase(),
+    country: country.name,
+    officialName: country.officialName,
+    capital: country.capital,
+    region: country.region,
+    subregion: country.subregion,
+    currencies: country.currencies,
+    languages: country.languages,
+    population: country.population,
+    flag: country.flag,
+    timezones: country.timezones,
+  });
 });
 
 // Get pending orders containing a specific product (used by Products service)

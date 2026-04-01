@@ -11,7 +11,7 @@ import {
   updateProductInCarts,
 } from "./store";
 import { addCartItemSchema, updateCartItemSchema, applyDiscountSchema } from "./validation";
-import { fetchProduct, validatePaymentForCheckout, submitOrderFromCart } from "./service";
+import { fetchProduct, validatePaymentForCheckout, submitOrderFromCart, convertCurrency } from "./service";
 
 const router = Router();
 
@@ -152,6 +152,39 @@ router.post("/cart/product-update", (req: Request, res: Response) => {
   }
   const count = updateProductInCarts(productId, price, name);
   res.json({ message: "Product updated in carts", cartsUpdated: count });
+});
+
+// Convert cart total to other currencies via Frankfurter public API
+router.get("/cart/:cartId/convert", async (req: Request, res: Response) => {
+  const cart = getCart(req.params.cartId);
+  if (!cart) {
+    res.status(404).json({ message: "Cart not found" });
+    return;
+  }
+  const to = (req.query.to as string)?.trim();
+  if (!to) {
+    res.status(400).json({ message: "Query param 'to' required (e.g. ?to=EUR,GBP)" });
+    return;
+  }
+  const sub = subtotal(cart.items);
+  const discount = cart.discountPercent ? (sub * cart.discountPercent) / 100 : 0;
+  const total = Math.max(0, sub - discount);
+  if (total === 0) {
+    res.json({ cartId: cart.id, total: 0, currency: "USD", converted: {} });
+    return;
+  }
+  const targets = to.split(",").map((c) => c.trim().toUpperCase()).filter((c) => c.length === 3);
+  const result = await convertCurrency(total, "USD", targets);
+  if (!result) {
+    res.status(502).json({ message: "Currency conversion service unavailable" });
+    return;
+  }
+  res.json({
+    cartId: cart.id,
+    total,
+    currency: "USD",
+    converted: result.rates,
+  });
 });
 
 // Checkout: validate payment + create order from cart

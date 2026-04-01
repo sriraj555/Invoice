@@ -68,6 +68,53 @@ export async function createInvoiceForOrder(orderId: string): Promise<InvoiceRes
   }
 }
 
+// --- Public API: REST Countries ---
+export interface CountryInfo {
+  name: string;
+  officialName: string;
+  capital: string[];
+  region: string;
+  subregion: string;
+  currencies: Record<string, { name: string; symbol: string }>;
+  languages: Record<string, string>;
+  population: number;
+  flag: string;
+  timezones: string[];
+}
+
+export async function lookupCountry(code: string): Promise<CountryInfo | null> {
+  try {
+    const url = `https://restcountries.com/v3.1/alpha/${encodeURIComponent(code.toUpperCase())}?fields=name,capital,region,subregion,currencies,languages,population,flag,timezones`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      name: { common: string; official: string };
+      capital?: string[];
+      region: string;
+      subregion: string;
+      currencies?: Record<string, { name: string; symbol: string }>;
+      languages?: Record<string, string>;
+      population: number;
+      flag: string;
+      timezones: string[];
+    };
+    return {
+      name: data.name.common,
+      officialName: data.name.official,
+      capital: data.capital ?? [],
+      region: data.region,
+      subregion: data.subregion,
+      currencies: data.currencies ?? {},
+      languages: data.languages ?? {},
+      population: data.population,
+      flag: data.flag,
+      timezones: data.timezones,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function sendOrderConfirmationEmail(
   orderId: string,
   userEmail: string,
