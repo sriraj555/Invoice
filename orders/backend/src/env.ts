@@ -11,4 +11,7 @@ export const env = {
   get invoicesServiceUrl() {
     return process.env.INVOICES_SERVICE_URL ?? "http://localhost:4005";
   },
+  get paymentsServiceUrl() {
+    return process.env.PAYMENTS_SERVICE_URL ?? "http://localhost:4004";
+  },
 };

@@ -15,6 +15,7 @@ import {
   decreaseProductStock,
   validateStock,
   sendOrderConfirmationEmail,
+  validatePaymentAmount,
 } from "./service";
 import { sendOrderEvent } from "./sqsClient";
 
@@ -39,6 +40,13 @@ router.post("/orders", async (req: Request, res: Response) => {
   }
   const order = createOrder(parsed.data);
 
+  // Validate payment amount via Payments service (Orders → Payments)
+  const paymentValidation = await validatePaymentAmount(
+    order.id,
+    order.totalAmount,
+    order.currency
+  );
+
   // Publish order event to SQS for async payment processing
   await sendOrderEvent({
     type: "ORDER_CREATED",
@@ -50,7 +58,12 @@ router.post("/orders", async (req: Request, res: Response) => {
     items: order.items,
   });
 
-  res.status(201).json(order);
+  res.status(201).json({
+    ...order,
+    paymentValidation: paymentValidation
+      ? { valid: paymentValidation.valid }
+      : { valid: false, message: "Payment service unavailable" },
+  });
 });
 
 router.get("/orders", (req: Request, res: Response) => {
@@ -109,6 +122,27 @@ router.post("/orders/:orderId/confirm-payment", async (req: Request, res: Respon
   }
   const final = getOrder(updated.id);
   res.json(final ?? updated);
+});
+
+// Get pending orders containing a specific product (used by Products service)
+router.get("/orders/by-product/:productId", (req: Request, res: Response) => {
+  const productId = req.params.productId;
+  const allOrders = getAllOrders();
+  const pending = allOrders
+    .filter(
+      (o) =>
+        (o.status === "pending" || o.status === "payment_pending") &&
+        o.items.some((i) => i.productId === productId)
+    )
+    .map((o) => ({
+      orderId: o.id,
+      quantity: o.items.find((i) => i.productId === productId)?.quantity ?? 0,
+    }));
+  res.json({
+    productId,
+    pendingOrders: pending,
+    count: pending.length,
+  });
 });
 
 // Endpoint for SQS consumer to link invoice to order

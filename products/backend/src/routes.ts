@@ -13,6 +13,7 @@ import {
 } from "./store";
 import { createProductSchema, checkInventorySchema } from "./validation";
 import { validatePriceWithPublicApi } from "./publicApi";
+import { notifyCartsProductUpdated, getPendingOrdersForProduct } from "./service";
 
 const router = Router();
 
@@ -70,7 +71,7 @@ router.post("/products/validate-price", async (req: Request, res: Response) => {
   res.json({ valid: true });
 });
 
-router.put("/products/:id", (req: Request, res: Response) => {
+router.put("/products/:id", async (req: Request, res: Response) => {
   const id = req.params.id;
   const body = req.body as Record<string, unknown>;
   const name = body.name !== undefined ? String(body.name) : undefined;
@@ -105,6 +106,12 @@ router.put("/products/:id", (req: Request, res: Response) => {
     res.status(404).json({ message: "Product not found" });
     return;
   }
+
+  // Notify Carts service about price/name changes (fire-and-forget)
+  if (price !== undefined || name !== undefined) {
+    await notifyCartsProductUpdated(id, product.price, product.name).catch(() => {});
+  }
+
   res.json(product);
 });
 
@@ -141,12 +148,23 @@ router.post("/products/:id/release-stock", (req: Request, res: Response) => {
   res.json({ productId: id, quantity, newStock: updated?.stock ?? 0 });
 });
 
-router.delete("/products/:id", (req: Request, res: Response) => {
+router.delete("/products/:id", async (req: Request, res: Response) => {
   const existing = getProductById(req.params.id);
   if (!existing) {
     res.status(404).json({ message: "Product not found" });
     return;
   }
+
+  // Check Orders service for pending orders containing this product
+  const pendingOrders = await getPendingOrdersForProduct(req.params.id);
+  if (pendingOrders && pendingOrders.count > 0) {
+    res.status(409).json({
+      message: `Cannot delete: ${pendingOrders.count} pending order(s) contain this product`,
+      pendingOrders: pendingOrders.pendingOrders,
+    });
+    return;
+  }
+
   deleteProduct(req.params.id);
   res.status(204).send();
 });

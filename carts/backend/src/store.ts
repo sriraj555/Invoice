@@ -93,3 +93,22 @@ export function clearCart(cartId: string): boolean {
   cart.updatedAt = new Date().toISOString();
   return true;
 }
+
+export function updateProductInCarts(
+  productId: string,
+  price: number,
+  name: string
+): number {
+  let updated = 0;
+  for (const cart of carts.values()) {
+    for (const item of cart.items) {
+      if (item.productId === productId) {
+        item.price = price;
+        item.name = name;
+        cart.updatedAt = new Date().toISOString();
+        updated++;
+      }
+    }
+  }
+  return updated;
+}

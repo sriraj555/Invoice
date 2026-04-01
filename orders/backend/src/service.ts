@@ -42,6 +42,23 @@ export async function validateStock(productId: string, quantity: number): Promis
   }
 }
 
+export async function validatePaymentAmount(
+  orderId: string,
+  amount: number,
+  currency: string
+): Promise<{ valid: boolean; message?: string } | null> {
+  try {
+    const url = `${env.paymentsServiceUrl}/payments/validate`;
+    return await post<{ valid: boolean; message?: string }>(url, {
+      orderId,
+      amount,
+      currency,
+    });
+  } catch {
+    return null;
+  }
+}
+
 export async function createInvoiceForOrder(orderId: string): Promise<InvoiceResult | null> {
   try {
     const url = `${env.invoicesServiceUrl}/invoices`;

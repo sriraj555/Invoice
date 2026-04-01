@@ -8,9 +8,10 @@ import {
   applyDiscount,
   getDiscountPercent,
   clearCart,
+  updateProductInCarts,
 } from "./store";
 import { addCartItemSchema, updateCartItemSchema, applyDiscountSchema } from "./validation";
-import { fetchProduct } from "./service";
+import { fetchProduct, validatePaymentForCheckout, submitOrderFromCart } from "./service";
 
 const router = Router();
 
@@ -136,6 +137,83 @@ router.post("/cart/:cartId/clear", (req: Request, res: Response) => {
     return;
   }
   res.json({ message: "Cart cleared" });
+});
+
+// Receive product price/name updates from Products service
+router.post("/cart/product-update", (req: Request, res: Response) => {
+  const { productId, price, name } = req.body as {
+    productId?: string;
+    price?: number;
+    name?: string;
+  };
+  if (!productId || price === undefined || name === undefined) {
+    res.status(400).json({ message: "productId, price, and name are required" });
+    return;
+  }
+  const count = updateProductInCarts(productId, price, name);
+  res.json({ message: "Product updated in carts", cartsUpdated: count });
+});
+
+// Checkout: validate payment + create order from cart
+router.post("/cart/:cartId/checkout", async (req: Request, res: Response) => {
+  const cart = getCart(req.params.cartId);
+  if (!cart) {
+    res.status(404).json({ message: "Cart not found" });
+    return;
+  }
+  if (cart.items.length === 0) {
+    res.status(400).json({ message: "Cart is empty" });
+    return;
+  }
+
+  const { userId, currency } = req.body as { userId?: string; currency?: string };
+  const cur = (currency ?? "USD").toUpperCase();
+  const sub = cart.items.reduce((sum, i) => sum + (i.price ?? 0) * i.quantity, 0);
+  const discount = cart.discountPercent ? (sub * cart.discountPercent) / 100 : 0;
+  const total = Math.max(0, sub - discount);
+
+  // Step 1: Submit order to Orders service (Carts → Orders)
+  const orderPayload = {
+    userId: userId ?? cart.userId,
+    cartId: cart.id,
+    items: cart.items.map((i) => ({
+      productId: i.productId,
+      quantity: i.quantity,
+      price: i.price ?? 0,
+      name: i.name ?? i.productId,
+    })),
+    totalAmount: total,
+    currency: cur,
+  };
+
+  let order: { id: string; status: string } | null = null;
+  try {
+    order = await submitOrderFromCart(orderPayload);
+  } catch (e) {
+    res.status(502).json({
+      message: "Failed to create order",
+      detail: e instanceof Error ? e.message : "Unknown error",
+    });
+    return;
+  }
+
+  // Step 2: Validate payment via Payments service (Carts → Payments)
+  let paymentValid = false;
+  try {
+    paymentValid = await validatePaymentForCheckout(order.id, total, cur, cart.id);
+  } catch {
+    // Payment validation failed, but order was created — return partial result
+  }
+
+  res.json({
+    message: "Checkout initiated",
+    orderId: order.id,
+    orderStatus: order.status,
+    totalAmount: total,
+    currency: cur,
+    paymentValidated: paymentValid,
+    cartId: cart.id,
+  });
 });
 
 export default router;
