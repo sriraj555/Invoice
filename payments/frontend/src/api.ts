@@ -6,6 +6,7 @@ export interface Payment {
   amount: number;
   currency: string;
   status: string;
+  stripePaymentIntentId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -38,6 +39,60 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
   }
   return res.json();
 }
+
+// --- Stripe flow ---
+
+export interface StripeConfig {
+  publishableKey: string;
+}
+
+export async function getStripeConfig(): Promise<StripeConfig> {
+  return fetchApi("/payments/config");
+}
+
+export interface CreateIntentResponse {
+  clientSecret: string;
+  paymentIntentId: string;
+  paymentId: string;
+  orderId: string;
+  amount: number;
+  currency: string;
+}
+
+export async function createPaymentIntent(
+  orderId: string,
+  amount: number,
+  currency: string,
+  cartId?: string,
+  userEmail?: string,
+): Promise<CreateIntentResponse> {
+  return fetchApi("/payments/create-intent", {
+    method: "POST",
+    body: JSON.stringify({ orderId, amount, currency, ...(cartId && { cartId }), ...(userEmail && { userEmail }) }),
+  });
+}
+
+export interface ConfirmStripeResponse {
+  success: boolean;
+  paymentId: string;
+  orderId: string;
+  stripeStatus: string;
+  orderConfirmed: boolean;
+}
+
+export async function confirmStripePayment(
+  paymentIntentId: string,
+  paymentId: string,
+  orderId: string,
+  userEmail?: string,
+): Promise<ConfirmStripeResponse> {
+  return fetchApi("/payments/confirm-stripe", {
+    method: "POST",
+    body: JSON.stringify({ paymentIntentId, paymentId, orderId, ...(userEmail && { userEmail }) }),
+  });
+}
+
+// --- Existing endpoints ---
 
 export async function validatePayment(orderId: string, amount: number, currency: string, cartId?: string): Promise<{ valid: boolean }> {
   return fetchApi("/payments/validate", {

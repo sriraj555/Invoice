@@ -8,4 +8,10 @@ export const env = {
   get cartsServiceUrl() {
     return process.env.CARTS_SERVICE_URL ?? "http://localhost:4002";
   },
+  get stripeSecretKey() {
+    return process.env.STRIPE_SECRET_KEY ?? "";
+  },
+  get stripePublishableKey() {
+    return process.env.STRIPE_PUBLISHABLE_KEY ?? "";
+  },
 };
