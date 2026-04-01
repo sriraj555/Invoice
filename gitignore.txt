@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Build / output
+dist/
+build/
+*.tsbuildinfo
+
+# Environment (keep .env.example)
+.env
+.env.local
+.env.*.local
+
+# Logs and temp
+logs/
+*.log
+npm-debug.log*
+temp/
+tmp/
+cache/
+
+# Coverage
+coverage/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Optional (uncomment if you use)
+# .cursor/
