@@ -3,6 +3,7 @@ import { getPayment, createPayment, updatePaymentStatus } from "./store";
 import { validatePaymentSchema, confirmPaymentSchema } from "./validation";
 import { confirmPaymentWithOrderApi, validateStripePrice } from "./service";
 import { getCartSummary } from "./cartClient";
+import { sendPaymentEvent } from "./sqsClient";
 
 const router = Router();
 
@@ -72,6 +73,16 @@ router.post("/payments", async (req: Request, res: Response) => {
     payment.id,
     parsed.data.userEmail,
   );
+
+  // Publish payment event to SQS for async invoice generation
+  await sendPaymentEvent({
+    type: "PAYMENT_COMPLETED",
+    orderId: parsed.data.orderId,
+    paymentId: payment.id,
+    amount: parsed.data.amount,
+    currency: parsed.data.currency,
+  });
+
   res.status(201).json({
     ...payment,
     status: "succeeded",

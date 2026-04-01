@@ -16,6 +16,7 @@ import {
   validateStock,
   sendOrderConfirmationEmail,
 } from "./service";
+import { sendOrderEvent } from "./sqsClient";
 
 const router = Router();
 
@@ -37,6 +38,18 @@ router.post("/orders", async (req: Request, res: Response) => {
     }
   }
   const order = createOrder(parsed.data);
+
+  // Publish order event to SQS for async payment processing
+  await sendOrderEvent({
+    type: "ORDER_CREATED",
+    orderId: order.id,
+    userId: order.userId,
+    cartId: order.cartId,
+    totalAmount: order.totalAmount,
+    currency: order.currency,
+    items: order.items,
+  });
+
   res.status(201).json(order);
 });
 
@@ -67,10 +80,6 @@ router.put("/orders/:orderId", async (req: Request, res: Response) => {
     return;
   }
   const updated = updateOrderStatus(order.id, parsed.data.status);
-  if (parsed.data.status === "paid" && !order.invoiceId) {
-    const inv = await createInvoiceForOrder(order.id);
-    if (inv) setOrderInvoice(order.id, inv.id);
-  }
   res.json(updated);
 });
 
@@ -89,10 +98,7 @@ router.post("/orders/:orderId/confirm-payment", async (req: Request, res: Respon
   for (const item of updated.items) {
     await decreaseProductStock(item.productId, item.quantity);
   }
-  if (!updated.invoiceId) {
-    const inv = await createInvoiceForOrder(updated.id);
-    if (inv) setOrderInvoice(updated.id, inv.id);
-  }
+  // Invoice creation is now handled via SQS (payment-events queue)
   if (userEmail && typeof userEmail === "string") {
     await sendOrderConfirmationEmail(
       updated.id,
@@ -103,6 +109,21 @@ router.post("/orders/:orderId/confirm-payment", async (req: Request, res: Respon
   }
   const final = getOrder(updated.id);
   res.json(final ?? updated);
+});
+
+// Endpoint for SQS consumer to link invoice to order
+router.post("/orders/:orderId/set-invoice", (req: Request, res: Response) => {
+  const { invoiceId } = req.body as { invoiceId?: string };
+  if (!invoiceId) {
+    res.status(400).json({ message: "invoiceId required" });
+    return;
+  }
+  const updated = setOrderInvoice(req.params.orderId, invoiceId);
+  if (!updated) {
+    res.status(404).json({ message: "Order not found" });
+    return;
+  }
+  res.json(updated);
 });
 
 export default router;
