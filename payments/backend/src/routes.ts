@@ -23,7 +23,7 @@ router.post("/payments/validate", async (req: Request, res: Response) => {
   }
   if (parsed.data.cartId) {
     const cartSummary = await getCartSummary(parsed.data.cartId);
-    if (cartSummary && Math.abs(cartSummary.total - parsed.data.amount) > 0.01) {
+    if (cartSummary && cartSummary.total > 0 && Math.abs(cartSummary.total - parsed.data.amount) > 0.01) {
       res.status(400).json({
         valid: false,
         message: "Amount does not match cart total",
@@ -54,7 +54,7 @@ router.post("/payments", async (req: Request, res: Response) => {
   }
   if (parsed.data.cartId) {
     const cartSummary = await getCartSummary(parsed.data.cartId);
-    if (cartSummary && Math.abs(cartSummary.total - parsed.data.amount) > 0.01) {
+    if (cartSummary && cartSummary.total > 0 && Math.abs(cartSummary.total - parsed.data.amount) > 0.01) {
       res.status(400).json({
         message: "Amount does not match cart total",
         cartTotal: cartSummary.total,

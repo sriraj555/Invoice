@@ -75,7 +75,7 @@ export default function App() {
       <h1>Payment Processing & Validation</h1>
       <p className="card">Service: Payments API – validate payment details, process transactions, check status.</p>
       <p className="card" style={{ fontSize: "0.9rem", color: "#94a3b8" }}>
-        Use an <strong>Order ID</strong> from the Orders UI (<a href="http://localhost:3013" target="_blank" rel="noopener noreferrer">port 3013</a>). Create an order there first, then enter that Order ID and the order total here. Optionally add Cart ID to validate amount against cart total.
+        Use an <strong>Order ID</strong> from the Orders UI (<a href="http://orders-frontend-851725276040.s3-website-us-east-1.amazonaws.com" target="_blank" rel="noopener noreferrer">Orders UI</a>). Create an order there first, then enter that Order ID and the order total here. Optionally add Cart ID to validate amount against cart total.
       </p>
 
       <div className="card">

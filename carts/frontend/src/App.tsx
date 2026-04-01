@@ -199,7 +199,7 @@ export default function App() {
         <div className="card success-card">
           <h2>Payment successful</h2>
           <p className="success">Order ID: <strong>{paymentSuccess.orderId}</strong></p>
-          <p>Your cart has been cleared. You can get an invoice in the <a href="http://localhost:3015" target="_blank" rel="noopener noreferrer">Invoices UI (3015)</a> using this order ID.</p>
+          <p>Your cart has been cleared. You can get an invoice in the <a href="http://invoices-frontend-533267029271.s3-website-us-east-1.amazonaws.com" target="_blank" rel="noopener noreferrer">Invoices UI</a> using this order ID.</p>
         </div>
       )}
 

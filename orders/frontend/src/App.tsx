@@ -116,7 +116,7 @@ export default function App() {
       <h1>Order Processing & Management (CRUD)</h1>
       <p className="card">Service: Orders API – create orders, track status, update order state.</p>
       <p className="card" style={{ fontSize: "0.9rem", color: "#94a3b8" }}>
-        Get a <strong>Cart ID</strong> from the Cart UI (<a href="http://localhost:3012" target="_blank" rel="noopener noreferrer">port 3012</a>) – create a cart and add items there, then use that Cart ID and the cart total here.
+        Get a <strong>Cart ID</strong> from the Cart UI (<a href="http://carts-frontend-975050377353.s3-website-us-east-1.amazonaws.com" target="_blank" rel="noopener noreferrer">Carts UI</a>) – create a cart and add items there, then use that Cart ID and the cart total here.
       </p>
       {error && <p className="error">{error}</p>}
 
