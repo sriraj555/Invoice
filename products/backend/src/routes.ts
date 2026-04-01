@@ -8,6 +8,7 @@ import {
   deleteProduct,
   checkStock,
   reserveStock,
+  releaseStock,
   getRecommendations,
 } from "./store";
 import { createProductSchema, checkInventorySchema } from "./validation";
@@ -121,6 +122,23 @@ router.post("/products/:id/decrease-stock", (req: Request, res: Response) => {
   }
   const product = getProductById(id);
   res.json({ productId: id, quantity, newStock: product?.stock ?? 0 });
+});
+
+router.post("/products/:id/release-stock", (req: Request, res: Response) => {
+  const id = req.params.id;
+  const quantity = typeof req.body?.quantity === "number" ? req.body.quantity : undefined;
+  if (quantity === undefined || quantity < 1) {
+    res.status(400).json({ message: "quantity required (positive number)" });
+    return;
+  }
+  const product = getProductById(id);
+  if (!product) {
+    res.status(404).json({ message: "Product not found" });
+    return;
+  }
+  releaseStock(id, quantity);
+  const updated = getProductById(id);
+  res.json({ productId: id, quantity, newStock: updated?.stock ?? 0 });
 });
 
 router.delete("/products/:id", (req: Request, res: Response) => {
