@@ -28,6 +28,7 @@ export async function enrichOrderItemsWithProductInfo(
   }
   return result;
 }
+<<<<<<< HEAD
 
 // --- Public API: QR Code Generation (api.qrserver.com) ---
 export interface QrCodeResult {
@@ -63,3 +64,5 @@ export async function generateInvoiceQrCode(
 
   return { qrCodeUrl, invoiceId, data };
 }
+=======
+>>>>>>> 939fbba14dc2753b1eaa48d3ee547d81e638fe50

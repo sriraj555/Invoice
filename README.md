@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Invoices -- Invoice & Receipt Generator API
 
 **Owner**: Sriraj Gannavaram (x24331873)
@@ -89,4 +90,18 @@ cd invoices/frontend && npm install && npm run dev   # Frontend on :3015
 PORT=4005
 ORDERS_SERVICE_URL=http://localhost:4003
 PRODUCTS_SERVICE_URL=http://localhost:4001
+=======
+# Invoices – Invoice & Receipt Generator
+
+One folder: **backend** (API) + **frontend** (UI).
+
+- **backend**: Create invoice by order ID, get by order/invoice ID, PDF download. Calls Order, Products (SKU). Port 4005.
+- **frontend**: Create invoice, look up by order or invoice ID, download PDF. Port 3015.
+
+## Run
+
+```bash
+cd invoices/backend && npm install && npm run build && npm start
+cd invoices/frontend && npm install && npm run dev
+>>>>>>> 939fbba14dc2753b1eaa48d3ee547d81e638fe50
 ```

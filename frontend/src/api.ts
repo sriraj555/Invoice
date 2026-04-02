@@ -22,10 +22,13 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json();
 }
 
+<<<<<<< HEAD
 export async function getAllInvoices(): Promise<Invoice[]> {
   return fetchApi<Invoice[]>("/invoices");
 }
 
+=======
+>>>>>>> 939fbba14dc2753b1eaa48d3ee547d81e638fe50
 export async function createInvoice(orderId: string): Promise<{ id: string; orderId: string; amount: number; currency: string; createdAt: string }> {
   return fetchApi("/invoices", { method: "POST", body: JSON.stringify({ orderId }) });
 }
@@ -37,6 +40,7 @@ export async function getInvoiceByOrderId(orderId: string): Promise<Invoice> {
 export async function getInvoice(invoiceId: string): Promise<Invoice> {
   return fetchApi<Invoice>(`/invoices/${encodeURIComponent(invoiceId)}`);
 }
+<<<<<<< HEAD
 
 export interface QrCodeResult {
   qrCodeUrl: string;
@@ -62,3 +66,5 @@ export interface Order {
 export async function getOrders(): Promise<Order[]> {
   return fetchApi<Order[]>("/orders");
 }
+=======
+>>>>>>> 939fbba14dc2753b1eaa48d3ee547d81e638fe50

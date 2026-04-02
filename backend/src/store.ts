@@ -7,10 +7,13 @@ export function getInvoice(invoiceId: string): Invoice | undefined {
   return invoices.get(invoiceId);
 }
 
+<<<<<<< HEAD
 export function getAllInvoices(): Invoice[] {
   return Array.from(invoices.values());
 }
 
+=======
+>>>>>>> 939fbba14dc2753b1eaa48d3ee547d81e638fe50
 export function getInvoiceByOrderId(orderId: string): Invoice | undefined {
   return Array.from(invoices.values()).find((i) => i.orderId === orderId);
 }

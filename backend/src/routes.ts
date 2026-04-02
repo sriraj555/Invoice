@@ -1,17 +1,26 @@
 import { Router, Request, Response } from "express";
+<<<<<<< HEAD
 import { getInvoice, getInvoiceByOrderId, getAllInvoices, createInvoice, setInvoicePdfUrl } from "./store";
 import { createInvoiceSchema } from "./validation";
 import { fetchOrder, enrichOrderItemsWithProductInfo, generateInvoiceQrCode } from "./service";
+=======
+import { getInvoice, getInvoiceByOrderId, createInvoice, setInvoicePdfUrl } from "./store";
+import { createInvoiceSchema } from "./validation";
+import { fetchOrder, enrichOrderItemsWithProductInfo } from "./service";
+>>>>>>> 939fbba14dc2753b1eaa48d3ee547d81e638fe50
 import { generateInvoicePdfBuffer } from "./pdf";
 
 const router = Router();
 
+<<<<<<< HEAD
 // List all invoices
 router.get("/invoices", (_req: Request, res: Response) => {
   const invoices = getAllInvoices();
   res.json(invoices);
 });
 
+=======
+>>>>>>> 939fbba14dc2753b1eaa48d3ee547d81e638fe50
 router.post("/invoices", async (req: Request, res: Response) => {
   const parsed = createInvoiceSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -65,6 +74,7 @@ router.get("/invoices/:invoiceId", (req: Request, res: Response) => {
   res.json(invoice);
 });
 
+<<<<<<< HEAD
 // QR Code generation via public API (api.qrserver.com)
 router.get("/invoices/:invoiceId/qr-code", async (req: Request, res: Response) => {
   const invoice = getInvoice(req.params.invoiceId);
@@ -85,6 +95,8 @@ router.get("/invoices/:invoiceId/qr-code", async (req: Request, res: Response) =
   }
 });
 
+=======
+>>>>>>> 939fbba14dc2753b1eaa48d3ee547d81e638fe50
 router.get("/test-pdf", async (req: Request, res: Response) => {
   try {
     const testInvoice = {

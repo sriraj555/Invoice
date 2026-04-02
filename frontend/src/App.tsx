@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useEffect, useState } from "react";
 import {
   createInvoice,
@@ -10,10 +11,15 @@ import {
   type Order,
   type QrCodeResult,
 } from "./api";
+=======
+import { useState } from "react";
+import { createInvoice, getInvoiceByOrderId, getInvoice } from "./api";
+>>>>>>> 939fbba14dc2753b1eaa48d3ee547d81e638fe50
 import { getInvoicePdfUrl } from "./config";
 import "./index.css";
 
 export default function App() {
+<<<<<<< HEAD
   const [orders, setOrders] = useState<Order[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [orderId, setOrderId] = useState("");
@@ -34,6 +40,15 @@ export default function App() {
     loadData();
   }, []);
 
+=======
+  const [orderId, setOrderId] = useState("");
+  const [invoiceId, setInvoiceId] = useState("");
+  const [invoice, setInvoice] = useState<Awaited<ReturnType<typeof getInvoice>> | null>(null);
+  const [created, setCreated] = useState<{ id: string; orderId: string; amount: number } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+>>>>>>> 939fbba14dc2753b1eaa48d3ee547d81e638fe50
   const handleCreate = async () => {
     if (!orderId.trim()) return;
     setError(null);
@@ -42,7 +57,10 @@ export default function App() {
     try {
       const r = await createInvoice(orderId.trim());
       setCreated(r);
+<<<<<<< HEAD
       loadData();
+=======
+>>>>>>> 939fbba14dc2753b1eaa48d3ee547d81e638fe50
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
     } finally {
@@ -55,7 +73,10 @@ export default function App() {
     setError(null);
     setInvoice(null);
     setCreated(null);
+<<<<<<< HEAD
     setQrCode(null);
+=======
+>>>>>>> 939fbba14dc2753b1eaa48d3ee547d81e638fe50
     setLoading(true);
     try {
       const inv = await getInvoiceByOrderId(orderId.trim());
@@ -73,7 +94,10 @@ export default function App() {
     setError(null);
     setInvoice(null);
     setCreated(null);
+<<<<<<< HEAD
     setQrCode(null);
+=======
+>>>>>>> 939fbba14dc2753b1eaa48d3ee547d81e638fe50
     setLoading(true);
     try {
       const inv = await getInvoice(invoiceId.trim());
@@ -86,6 +110,7 @@ export default function App() {
     }
   };
 
+<<<<<<< HEAD
   const handleGenerateQr = async (invId: string) => {
     setQrLoading(true);
     setQrCode(null);
@@ -103,11 +128,18 @@ export default function App() {
     <div className="app">
       <h1>Invoice & Receipt Generator</h1>
       <p className="card">Service: Invoices API – generate invoices, get by order ID, download PDF, generate QR code.</p>
+=======
+  return (
+    <div className="app">
+      <h1>Invoice & Receipt Generator</h1>
+      <p className="card">Service: Invoices API – generate invoices, get by order ID, download PDF.</p>
+>>>>>>> 939fbba14dc2753b1eaa48d3ee547d81e638fe50
 
       <div className="card">
         <h2>Create invoice</h2>
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end" }}>
           <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
+<<<<<<< HEAD
             <label>Select order</label>
             <select value={orderId} onChange={(e) => setOrderId(e.target.value)}>
               <option value="">-- Select an order --</option>
@@ -128,11 +160,22 @@ export default function App() {
         {created && (
           <p className="success" style={{ marginTop: "0.5rem" }}>
             Created invoice {created.id.slice(0, 8)}… for order {created.orderId.slice(0, 8)}…. Amount: {created.amount.toFixed(2)}.
+=======
+            <label>Order ID</label>
+            <input value={orderId} onChange={(e) => setOrderId(e.target.value)} placeholder="Order ID" />
+          </div>
+          <button onClick={handleCreate} disabled={loading}>Generate invoice</button>
+        </div>
+        {created && (
+          <p className="success" style={{ marginTop: "0.5rem" }}>
+            Created invoice {created.id} for order {created.orderId}. Amount: {created.amount.toFixed(2)}.
+>>>>>>> 939fbba14dc2753b1eaa48d3ee547d81e638fe50
           </p>
         )}
       </div>
 
       <div className="card">
+<<<<<<< HEAD
         <h2>Look up invoice by order</h2>
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end" }}>
           <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
@@ -147,10 +190,20 @@ export default function App() {
             </select>
           </div>
           <button onClick={handleLookupByOrder} disabled={loading || !orderId}>Look up</button>
+=======
+        <h2>Get invoice by order ID</h2>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end" }}>
+          <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
+            <label>Order ID</label>
+            <input value={orderId} onChange={(e) => setOrderId(e.target.value)} placeholder="Order ID" />
+          </div>
+          <button onClick={handleLookupByOrder} disabled={loading}>Look up</button>
+>>>>>>> 939fbba14dc2753b1eaa48d3ee547d81e638fe50
         </div>
       </div>
 
       <div className="card">
+<<<<<<< HEAD
         <h2>Look up invoice by ID</h2>
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end" }}>
           <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
@@ -171,6 +224,16 @@ export default function App() {
             No invoices yet. Generate one above.
           </p>
         )}
+=======
+        <h2>Get invoice by ID</h2>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end" }}>
+          <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
+            <label>Invoice ID</label>
+            <input value={invoiceId} onChange={(e) => setInvoiceId(e.target.value)} placeholder="Invoice ID" />
+          </div>
+          <button onClick={handleLookupById} disabled={loading}>Look up</button>
+        </div>
+>>>>>>> 939fbba14dc2753b1eaa48d3ee547d81e638fe50
       </div>
 
       {error && <p className="error">{error}</p>}
@@ -178,7 +241,11 @@ export default function App() {
       {invoice && (
         <div className="card">
           <h2>Invoice {invoice.id.slice(0, 8)}…</h2>
+<<<<<<< HEAD
           <p>Order: {invoice.orderId.slice(0, 8)}… | Amount: {invoice.currency} {invoice.amount.toFixed(2)}</p>
+=======
+          <p>Order: {invoice.orderId} | Amount: {invoice.currency} {invoice.amount.toFixed(2)}</p>
+>>>>>>> 939fbba14dc2753b1eaa48d3ee547d81e638fe50
           <p>Created: {new Date(invoice.createdAt).toLocaleString()}</p>
           <p><strong>Items:</strong></p>
           <ul>
@@ -188,6 +255,7 @@ export default function App() {
               </li>
             ))}
           </ul>
+<<<<<<< HEAD
           <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.75rem", flexWrap: "wrap" }}>
             <a href={getInvoicePdfUrl(invoice.id)} target="_blank" rel="noopener noreferrer" style={{ color: "#38bdf8" }}>
               Download PDF
@@ -251,6 +319,13 @@ export default function App() {
           </div>
         </>
       )}
+=======
+          <a href={getInvoicePdfUrl(invoice.id)} target="_blank" rel="noopener noreferrer" style={{ color: "#38bdf8" }}>
+            Download PDF
+          </a>
+        </div>
+      )}
+>>>>>>> 939fbba14dc2753b1eaa48d3ee547d81e638fe50
     </div>
   );
 }
