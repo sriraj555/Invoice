@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   createCart,
   getCart,
@@ -21,6 +21,7 @@ const USER_ID = "cart-user-" + Date.now();
 
 export default function App() {
   const [cartId, setCartId] = useState<string | null>(null);
+  const cartIdRef = useRef<string | null>(null);
   const [cart, setCart] = useState<(Cart & { subtotal?: number; total?: number }) | null>(null);
   const [summary, setSummary] = useState<CartSummary | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -34,16 +35,52 @@ export default function App() {
   const [converted, setConverted] = useState<Record<string, number> | null>(null);
   const [converting, setConverting] = useState(false);
 
-  const loadCart = async () => {
-    let cid = cartId;
-    if (!cid) {
-      const created = await createCart(USER_ID);
-      cid = created.id;
-      setCartId(cid);
+  // Keep ref in sync with state for immediate access
+  const updateCartId = (id: string) => {
+    cartIdRef.current = id;
+    setCartId(id);
+  };
+
+  // Create a new cart and return its ID
+  const createNewCart = async (): Promise<string> => {
+    const created = await createCart(USER_ID);
+    updateCartId(created.id);
+    return created.id;
+  };
+
+  // Ensure a valid cart exists, recreate if Lambda recycled
+  const ensureCart = async (): Promise<string> => {
+    const cid = cartIdRef.current;
+    if (cid) {
+      try {
+        await getCart(cid);
+        return cid;
+      } catch {
+        // Cart gone (Lambda recycled), recreate
+      }
     }
+    return await createNewCart();
+  };
+
+  const loadCart = async () => {
+    let cid = cartIdRef.current;
+
+    if (cid) {
+      try {
+        const [cartData, summaryData] = await Promise.all([getCart(cid), getCartSummary(cid)]);
+        setCart(cartData);
+        setSummary(summaryData);
+        return cid;
+      } catch {
+        // Cart not found (Lambda recycled), recreate below
+      }
+    }
+
+    cid = await createNewCart();
     const [cartData, summaryData] = await Promise.all([getCart(cid), getCartSummary(cid)]);
     setCart(cartData);
     setSummary(summaryData);
+    return cid;
   };
 
   useEffect(() => {
@@ -64,40 +101,66 @@ export default function App() {
   }, [products]);
 
   const handleAdd = async () => {
-    if (!cartId) return;
     setError(null);
     try {
-      await addToCart(cartId, productId.trim(), quantity);
-      await loadCart();
+      let cid = cartIdRef.current;
+
+      // Ensure we have a cart ID
+      if (!cid) {
+        cid = await createNewCart();
+      }
+
+      try {
+        await addToCart(cid, productId.trim(), quantity);
+      } catch (addErr) {
+        // Cart not found - Lambda recycled, recreate and retry
+        if (addErr instanceof Error && addErr.message.toLowerCase().includes("not found")) {
+          cid = await createNewCart();
+          await addToCart(cid, productId.trim(), quantity);
+        } else {
+          throw addErr;
+        }
+      }
+
+      // Reload cart data using the valid cart ID
+      const [cartData, summaryData] = await Promise.all([getCart(cid), getCartSummary(cid)]);
+      setCart(cartData);
+      setSummary(summaryData);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
     }
   };
 
-  const handleRemove = async (productId: string) => {
-    if (!cartId) return;
+  const handleRemove = async (pid: string) => {
     setError(null);
     try {
-      await removeFromCart(cartId, productId);
-      await loadCart();
+      const cid = await ensureCart();
+      await removeFromCart(cid, pid);
+      const [cartData, summaryData] = await Promise.all([getCart(cid), getCartSummary(cid)]);
+      setCart(cartData);
+      setSummary(summaryData);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
     }
   };
 
   const handleDiscount = async () => {
-    if (!cartId || !discountCode.trim()) return;
+    if (!discountCode.trim()) return;
     setError(null);
     try {
-      await applyDiscount(cartId, discountCode.trim());
-      await loadCart();
+      const cid = await ensureCart();
+      await applyDiscount(cid, discountCode.trim());
+      const [cartData, summaryData] = await Promise.all([getCart(cid), getCartSummary(cid)]);
+      setCart(cartData);
+      setSummary(summaryData);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Invalid code");
     }
   };
 
   const handleCheckoutAndPay = async () => {
-    if (!cartId || !cart || !summary || cart.items.length === 0) {
+    const cid = cartIdRef.current;
+    if (!cid || !cart || !summary || cart.items.length === 0) {
       setError("Cart is empty. Add items first.");
       return;
     }
@@ -113,18 +176,18 @@ export default function App() {
       }));
       const order = await createOrder({
         userId: USER_ID,
-        cartId,
+        cartId: cid,
         items: orderItems,
         totalAmount: summary.total,
         currency: "USD",
       });
-      const valid = await validatePayment(order.id, summary.total, "USD", cartId);
+      const valid = await validatePayment(order.id, summary.total, "USD", cid);
       if (!valid.valid) {
         setError("Payment validation failed. Amount may not match cart total.");
         setPaying(false);
         return;
       }
-      const payment = await processPayment(order.id, summary.total, "USD", cartId);
+      const payment = await processPayment(order.id, summary.total, "USD", cid);
       if (payment.status === "succeeded" || payment.status === "paid") {
         setPaymentSuccess({ orderId: order.id });
         await loadCart();
@@ -191,11 +254,12 @@ export default function App() {
                 <button
                   type="button"
                   onClick={async () => {
-                    if (!cartId) return;
+                    const cid = cartIdRef.current;
+                    if (!cid) return;
                     setConverting(true);
                     setConverted(null);
                     try {
-                      const r = await convertCartCurrency(cartId, "EUR,GBP,JPY,INR");
+                      const r = await convertCartCurrency(cid, "EUR,GBP,JPY,INR");
                       setConverted(r.converted);
                     } catch (e) {
                       setError(e instanceof Error ? e.message : "Conversion failed");

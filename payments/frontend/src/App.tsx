@@ -9,6 +9,8 @@ import {
   getPaymentStatus,
   getOrders,
   getAllPayments,
+  getInvoiceByOrderId,
+  getInvoicePdfUrl,
   type Order,
   type Payment,
 } from "./api";
@@ -38,6 +40,7 @@ function CheckoutForm({ orders, onPaymentComplete }: { orders: Order[]; onPaymen
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [invoicePdfUrl, setInvoicePdfUrl] = useState<string | null>(null);
 
   // Auto-fill amount and currency when order is selected
   const handleOrderSelect = (id: string) => {
@@ -124,6 +127,15 @@ function CheckoutForm({ orders, onPaymentComplete }: { orders: Order[]; onPaymen
         `Order confirmed: ${confirmation.orderConfirmed}. ` +
         `Stripe status: ${confirmation.stripeStatus}.`,
       );
+
+      // Try to fetch invoice for download
+      try {
+        const invoice = await getInvoiceByOrderId(orderId.trim());
+        setInvoicePdfUrl(getInvoicePdfUrl(invoice.id));
+      } catch {
+        // Invoice may not be generated yet (async via SQS)
+      }
+
       onPaymentComplete();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Payment failed");
@@ -207,6 +219,25 @@ function CheckoutForm({ orders, onPaymentComplete }: { orders: Order[]; onPaymen
         </button>
 
         {result && <p className="success" style={{ marginTop: "0.75rem" }}>{result}</p>}
+        {invoicePdfUrl && (
+          <a
+            href={invoicePdfUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "inline-block",
+              marginTop: "0.5rem",
+              padding: "0.5rem 1rem",
+              background: "#2563eb",
+              color: "#fff",
+              borderRadius: "6px",
+              textDecoration: "none",
+              fontSize: "0.9rem",
+            }}
+          >
+            Download Invoice PDF
+          </a>
+        )}
         {error && <p className="error" style={{ marginTop: "0.75rem" }}>{error}</p>}
       </div>
     </form>
@@ -219,17 +250,29 @@ function PaymentLookup({ payments }: { payments: Payment[] }) {
   const [result, setResult] = useState<string | null>(null);
   const [statusResult, setStatusResult] = useState<{ paymentId: string; orderId: string; status: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lookupInvoiceUrl, setLookupInvoiceUrl] = useState<string | null>(null);
 
   const handleLookup = async () => {
     if (!paymentId.trim()) return;
     setError(null);
     setStatusResult(null);
     setResult(null);
+    setLookupInvoiceUrl(null);
     try {
       const payment = await getPayment(paymentId.trim());
       const status = await getPaymentStatus(paymentId.trim());
       setStatusResult(status);
       setResult(`Payment: ${payment.status}, Order: ${payment.orderId}, Amount: ${payment.currency} ${payment.amount.toFixed(2)}`);
+
+      // Try to fetch invoice for this payment's order
+      if (payment.status === "succeeded") {
+        try {
+          const invoice = await getInvoiceByOrderId(payment.orderId);
+          setLookupInvoiceUrl(getInvoicePdfUrl(invoice.id));
+        } catch {
+          // No invoice yet
+        }
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Not found");
       setStatusResult(null);
@@ -264,6 +307,25 @@ function PaymentLookup({ payments }: { payments: Payment[] }) {
         </p>
       )}
       {result && <p style={{ marginTop: "0.25rem", fontSize: "0.9rem", color: "#94a3b8" }}>{result}</p>}
+      {lookupInvoiceUrl && (
+        <a
+          href={lookupInvoiceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "inline-block",
+            marginTop: "0.5rem",
+            padding: "0.5rem 1rem",
+            background: "#2563eb",
+            color: "#fff",
+            borderRadius: "6px",
+            textDecoration: "none",
+            fontSize: "0.9rem",
+          }}
+        >
+          Download Invoice PDF
+        </a>
+      )}
       {error && <p className="error" style={{ marginTop: "0.5rem" }}>{error}</p>}
     </div>
   );

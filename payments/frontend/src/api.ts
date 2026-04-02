@@ -141,3 +141,21 @@ export async function getOrders(): Promise<Order[]> {
 export async function getAllPayments(): Promise<Payment[]> {
   return fetchApi<Payment[]>("/payments");
 }
+
+// --- Cross-service: Invoices ---
+
+export interface Invoice {
+  id: string;
+  orderId: string;
+  amount: number;
+  currency: string;
+  createdAt: string;
+}
+
+export async function getInvoiceByOrderId(orderId: string): Promise<Invoice> {
+  return fetchApi<Invoice>(`/invoices/order/${encodeURIComponent(orderId)}`);
+}
+
+export function getInvoicePdfUrl(invoiceId: string): string {
+  return `${API_BASE}/invoices/${encodeURIComponent(invoiceId)}/pdf`;
+}
