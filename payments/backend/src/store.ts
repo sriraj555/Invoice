@@ -7,6 +7,10 @@ export function getPayment(paymentId: string): Payment | undefined {
   return payments.get(paymentId);
 }
 
+export function getAllPayments(): Payment[] {
+  return Array.from(payments.values());
+}
+
 export function getPaymentByOrderId(orderId: string): Payment | undefined {
   return Array.from(payments.values()).find((p) => p.orderId === orderId);
 }

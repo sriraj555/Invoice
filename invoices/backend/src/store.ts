@@ -7,6 +7,10 @@ export function getInvoice(invoiceId: string): Invoice | undefined {
   return invoices.get(invoiceId);
 }
 
+export function getAllInvoices(): Invoice[] {
+  return Array.from(invoices.values());
+}
+
 export function getInvoiceByOrderId(orderId: string): Invoice | undefined {
   return Array.from(invoices.values()).find((i) => i.orderId === orderId);
 }

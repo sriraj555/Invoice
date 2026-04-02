@@ -1,10 +1,16 @@
 import { Router, Request, Response } from "express";
-import { getInvoice, getInvoiceByOrderId, createInvoice, setInvoicePdfUrl } from "./store";
+import { getInvoice, getInvoiceByOrderId, getAllInvoices, createInvoice, setInvoicePdfUrl } from "./store";
 import { createInvoiceSchema } from "./validation";
-import { fetchOrder, enrichOrderItemsWithProductInfo } from "./service";
+import { fetchOrder, enrichOrderItemsWithProductInfo, generateInvoiceQrCode } from "./service";
 import { generateInvoicePdfBuffer } from "./pdf";
 
 const router = Router();
+
+// List all invoices
+router.get("/invoices", (_req: Request, res: Response) => {
+  const invoices = getAllInvoices();
+  res.json(invoices);
+});
 
 router.post("/invoices", async (req: Request, res: Response) => {
   const parsed = createInvoiceSchema.safeParse(req.body);
@@ -57,6 +63,26 @@ router.get("/invoices/:invoiceId", (req: Request, res: Response) => {
     return;
   }
   res.json(invoice);
+});
+
+// QR Code generation via public API (api.qrserver.com)
+router.get("/invoices/:invoiceId/qr-code", async (req: Request, res: Response) => {
+  const invoice = getInvoice(req.params.invoiceId);
+  if (!invoice) {
+    res.status(404).json({ message: "Invoice not found" });
+    return;
+  }
+  try {
+    const qr = await generateInvoiceQrCode(
+      invoice.id,
+      invoice.orderId,
+      invoice.amount,
+      invoice.currency
+    );
+    res.json(qr);
+  } catch (error) {
+    res.status(500).json({ message: "QR code generation failed", error: String(error) });
+  }
 });
 
 router.get("/test-pdf", async (req: Request, res: Response) => {

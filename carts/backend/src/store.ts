@@ -94,6 +94,10 @@ export function clearCart(cartId: string): boolean {
   return true;
 }
 
+export function getAllCarts(): Cart[] {
+  return Array.from(carts.values());
+}
+
 export function updateProductInCarts(
   productId: string,
   price: number,

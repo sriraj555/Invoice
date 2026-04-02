@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { getPayment, createPayment, updatePaymentStatus, setStripePaymentIntent } from "./store";
+import { getPayment, getAllPayments, createPayment, updatePaymentStatus, setStripePaymentIntent } from "./store";
 import { validatePaymentSchema, confirmPaymentSchema, createIntentSchema, confirmStripeSchema } from "./validation";
 import { confirmPaymentWithOrderApi, validateStripePrice } from "./service";
 import { getCartSummary } from "./cartClient";
@@ -127,6 +127,12 @@ router.post("/payments/confirm-stripe", async (req: Request, res: Response) => {
 });
 
 // --- Existing endpoints (kept for backward compatibility) ---
+
+// List all payments (used by frontends for dropdown selection)
+router.get("/payments", (_req: Request, res: Response) => {
+  const payments = getAllPayments();
+  res.json(payments);
+});
 
 router.post("/payments/validate", async (req: Request, res: Response) => {
   const parsed = validatePaymentSchema.safeParse(req.body);

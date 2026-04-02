@@ -92,3 +92,17 @@ export interface CountryInfo {
 export async function validateCountry(code: string): Promise<CountryInfo> {
   return fetchApi<CountryInfo>(`/orders/validate-country/${encodeURIComponent(code)}`);
 }
+
+// --- Cross-service: Carts ---
+
+export interface CartSummary {
+  id: string;
+  userId: string;
+  itemCount: number;
+  total: number;
+  updatedAt: string;
+}
+
+export async function getCarts(): Promise<CartSummary[]> {
+  return fetchApi<CartSummary[]>("/cart/all");
+}

@@ -1,4 +1,4 @@
-const FRANKFURTER_URL = process.env.PUBLIC_EXCHANGE_API ?? "https://api.frankfurter.dev";
+const FRANKFURTER_URL = process.env.PUBLIC_EXCHANGE_API ?? "https://api.frankfurter.app";
 
 export async function validatePriceWithPublicApi(
   amount: number,

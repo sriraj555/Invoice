@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getOrders, getOrder, createOrder, updateOrderStatus, getProducts, validateCountry, type Order, type Product, type CountryInfo } from "./api";
+import { getOrders, getOrder, createOrder, updateOrderStatus, getProducts, validateCountry, getCarts, type Order, type Product, type CountryInfo, type CartSummary } from "./api";
 import "./index.css";
 
 const emptyItem = () => ({ productId: "", quantity: 1, price: 0, name: "" });
@@ -9,6 +9,7 @@ export default function App() {
   const [orderId, setOrderId] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
+  const [carts, setCarts] = useState<CartSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,6 +25,7 @@ export default function App() {
 
   useEffect(() => {
     getProducts().then(setProducts).catch(() => setProducts([]));
+    getCarts().then(setCarts).catch(() => setCarts([]));
   }, []);
 
   const loadOrders = () => {
@@ -36,6 +38,12 @@ export default function App() {
   useEffect(() => {
     loadOrders();
   }, []);
+
+  const handleOrderSelect = (id: string) => {
+    setOrderId(id);
+    const order = orders.find((o) => o.id === id);
+    if (order) setSelectedOrder(order);
+  };
 
   const handleLookup = () => {
     if (!orderId.trim()) return;
@@ -70,10 +78,18 @@ export default function App() {
     updateCreateItem(i, "price", product.price);
   };
 
+  const handleCartSelect = (cartId: string) => {
+    setCreateCartId(cartId);
+    const cart = carts.find((c) => c.id === cartId);
+    if (cart) {
+      setCreateTotal(cart.total.toString());
+    }
+  };
+
   const handleCreateOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!createUserId.trim() || !createCartId.trim()) {
-      setError("User ID and Cart ID are required. Get Cart ID from Cart UI (port 3012).");
+      setError("User ID and Cart ID are required.");
       return;
     }
     const items = createItems
@@ -114,13 +130,12 @@ export default function App() {
 
   if (loading) return <div className="app"><p>Loading...</p></div>;
 
+  const cartsWithItems = carts.filter((c) => c.itemCount > 0);
+
   return (
     <div className="app">
       <h1>Order Processing & Management (CRUD)</h1>
       <p className="card">Service: Orders API – create orders, track status, update order state.</p>
-      <p className="card" style={{ fontSize: "0.9rem", color: "#94a3b8" }}>
-        Get a <strong>Cart ID</strong> from the Cart UI (<a href="http://carts-frontend-975050377353.s3-website-us-east-1.amazonaws.com" target="_blank" rel="noopener noreferrer">Carts UI</a>) – create a cart and add items there, then use that Cart ID and the cart total here.
-      </p>
       {error && <p className="error">{error}</p>}
 
       <div className="card">
@@ -132,8 +147,20 @@ export default function App() {
               <input value={createUserId} onChange={(e) => setCreateUserId(e.target.value)} placeholder="order-user" required />
             </div>
             <div className="form-group">
-              <label>Cart ID *</label>
-              <input value={createCartId} onChange={(e) => setCreateCartId(e.target.value)} placeholder="Paste from Cart UI" required />
+              <label>Select cart *</label>
+              <select value={createCartId} onChange={(e) => handleCartSelect(e.target.value)} required>
+                <option value="">-- Select a cart --</option>
+                {cartsWithItems.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.id.slice(0, 8)}… – {c.itemCount} item(s) – USD {c.total.toFixed(2)}
+                  </option>
+                ))}
+              </select>
+              {cartsWithItems.length === 0 && (
+                <p style={{ fontSize: "0.8rem", color: "#94a3b8", marginTop: "0.25rem" }}>
+                  No carts with items. Add items in the Carts UI first.
+                </p>
+              )}
             </div>
             <div className="form-group">
               <label>Total amount *</label>
@@ -177,10 +204,17 @@ export default function App() {
         <h2>Track order</h2>
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end" }}>
           <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
-            <label>Order ID</label>
-            <input value={orderId} onChange={(e) => setOrderId(e.target.value)} placeholder="Paste order ID" />
+            <label>Select order</label>
+            <select value={orderId} onChange={(e) => handleOrderSelect(e.target.value)}>
+              <option value="">-- Select an order --</option>
+              {orders.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.id.slice(0, 8)}… – {o.currency} {o.totalAmount.toFixed(2)} – {o.status}
+                </option>
+              ))}
+            </select>
           </div>
-          <button type="button" onClick={handleLookup}>Look up</button>
+          <button type="button" onClick={handleLookup} disabled={!orderId}>Look up</button>
         </div>
       </div>
 
@@ -240,7 +274,6 @@ export default function App() {
               <li key={i.productId}>{i.name} × {i.quantity} @ {i.price.toFixed(2)}</li>
             ))}
           </ul>
-          <p><strong>Use this Order ID in Payments UI (3014):</strong> <code style={{ background: "#1e293b", padding: "0.2rem 0.5rem" }}>{selectedOrder.id}</code></p>
           {selectedOrder.status === "payment_pending" && (
             <button type="button" onClick={() => handleStatusUpdate(selectedOrder.id, "paid")}>Mark as paid</button>
           )}

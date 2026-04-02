@@ -120,3 +120,24 @@ export async function getPayment(paymentId: string): Promise<Payment> {
 export async function getPaymentStatus(paymentId: string): Promise<{ paymentId: string; orderId: string; status: string }> {
   return fetchApi(`/payments/status/${encodeURIComponent(paymentId)}`);
 }
+
+// --- Cross-service: Orders ---
+
+export interface Order {
+  id: string;
+  userId: string;
+  totalAmount: number;
+  currency: string;
+  status: string;
+  createdAt: string;
+}
+
+export async function getOrders(): Promise<Order[]> {
+  return fetchApi<Order[]>("/orders");
+}
+
+// --- List all payments ---
+
+export async function getAllPayments(): Promise<Payment[]> {
+  return fetchApi<Payment[]>("/payments");
+}

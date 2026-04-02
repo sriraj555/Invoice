@@ -7,6 +7,10 @@ import {
   confirmStripePayment,
   getPayment,
   getPaymentStatus,
+  getOrders,
+  getAllPayments,
+  type Order,
+  type Payment,
 } from "./api";
 import "./index.css";
 
@@ -21,19 +25,29 @@ function getStripePromise(): Promise<Stripe | null> {
 }
 
 // ---------- Stripe Checkout Form ----------
-function CheckoutForm() {
+function CheckoutForm({ orders, onPaymentComplete }: { orders: Order[]; onPaymentComplete: () => void }) {
   const stripe = useStripe();
   const elements = useElements();
 
   const [orderId, setOrderId] = useState("");
-  const [amount, setAmount] = useState("100");
+  const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("USD");
-  const [cartId, setCartId] = useState("");
+  const [cartId] = useState("");
   const [userEmail, setUserEmail] = useState("");
 
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Auto-fill amount and currency when order is selected
+  const handleOrderSelect = (id: string) => {
+    setOrderId(id);
+    const order = orders.find((o) => o.id === id);
+    if (order) {
+      setAmount(order.totalAmount.toString());
+      setCurrency(order.currency);
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -46,7 +60,7 @@ function CheckoutForm() {
     }
 
     if (!orderId.trim()) {
-      setError("Order ID is required. Create an order in Orders UI first.");
+      setError("Please select an order.");
       return;
     }
     const amt = parseFloat(amount);
@@ -110,6 +124,7 @@ function CheckoutForm() {
         `Order confirmed: ${confirmation.orderConfirmed}. ` +
         `Stripe status: ${confirmation.stripeStatus}.`,
       );
+      onPaymentComplete();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Payment failed");
     } finally {
@@ -117,18 +132,35 @@ function CheckoutForm() {
     }
   };
 
+  const pendingOrders = orders.filter((o) => o.status === "payment_pending" || o.status === "pending");
+
   return (
     <form onSubmit={handleSubmit}>
       <div className="card">
         <h2>Pay with Stripe</h2>
         <p style={{ fontSize: "0.85rem", color: "#94a3b8", marginTop: 0 }}>
-          Enter an <strong>Order ID</strong> from the Orders UI, then pay with a test card.
+          Select an order, then pay with a test card.
           Use card number <code>4242 4242 4242 4242</code>, any future expiry, any CVC.
         </p>
 
         <div className="form-group">
-          <label>Order ID</label>
-          <input value={orderId} onChange={(e) => setOrderId(e.target.value)} placeholder="Order ID from Orders UI" />
+          <label>Select order</label>
+          <select value={orderId} onChange={(e) => handleOrderSelect(e.target.value)}>
+            <option value="">-- Select an order --</option>
+            {pendingOrders.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.id.slice(0, 8)}… – {o.currency} {o.totalAmount.toFixed(2)} – {o.status}
+              </option>
+            ))}
+            {pendingOrders.length === 0 && orders.length > 0 && (
+              <option disabled>No pending orders (all paid/completed)</option>
+            )}
+          </select>
+          {orders.length === 0 && (
+            <p style={{ fontSize: "0.8rem", color: "#94a3b8", marginTop: "0.25rem" }}>
+              No orders found. Create one in the Orders UI first.
+            </p>
+          )}
         </div>
 
         <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -140,11 +172,6 @@ function CheckoutForm() {
             <label>Currency</label>
             <input value={currency} onChange={(e) => setCurrency(e.target.value)} placeholder="USD" maxLength={3} />
           </div>
-        </div>
-
-        <div className="form-group">
-          <label>Cart ID (optional)</label>
-          <input value={cartId} onChange={(e) => setCartId(e.target.value)} placeholder="Cart ID to validate amount" />
         </div>
 
         <div className="form-group">
@@ -175,7 +202,7 @@ function CheckoutForm() {
           </div>
         </div>
 
-        <button type="submit" disabled={!stripe || processing}>
+        <button type="submit" disabled={!stripe || processing || !orderId}>
           {processing ? "Processing..." : "Pay now"}
         </button>
 
@@ -187,7 +214,7 @@ function CheckoutForm() {
 }
 
 // ---------- Payment Status Lookup ----------
-function PaymentLookup() {
+function PaymentLookup({ payments }: { payments: Payment[] }) {
   const [paymentId, setPaymentId] = useState("");
   const [result, setResult] = useState<string | null>(null);
   const [statusResult, setStatusResult] = useState<{ paymentId: string; orderId: string; status: string } | null>(null);
@@ -214,11 +241,23 @@ function PaymentLookup() {
       <h2>Payment status</h2>
       <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end" }}>
         <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
-          <label>Payment ID</label>
-          <input value={paymentId} onChange={(e) => setPaymentId(e.target.value)} placeholder="Payment ID" />
+          <label>Select payment</label>
+          <select value={paymentId} onChange={(e) => setPaymentId(e.target.value)}>
+            <option value="">-- Select a payment --</option>
+            {payments.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.id.slice(0, 8)}… – {p.currency} {p.amount.toFixed(2)} – {p.status}
+              </option>
+            ))}
+          </select>
         </div>
-        <button onClick={handleLookup}>Look up</button>
+        <button onClick={handleLookup} disabled={!paymentId}>Look up</button>
       </div>
+      {payments.length === 0 && (
+        <p style={{ fontSize: "0.8rem", color: "#94a3b8", marginTop: "0.25rem" }}>
+          No payments yet. Process a payment above first.
+        </p>
+      )}
       {statusResult && (
         <p style={{ marginTop: "0.5rem" }}>
           Status: <span className="success">{statusResult.status}</span> | Order: {statusResult.orderId}
@@ -235,6 +274,13 @@ export default function App() {
   const [stripeLoaded, setStripeLoaded] = useState(false);
   const [stripeObj, setStripeObj] = useState<Stripe | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+
+  const loadData = () => {
+    getOrders().then(setOrders).catch(() => setOrders([]));
+    getAllPayments().then(setPayments).catch(() => setPayments([]));
+  };
 
   useEffect(() => {
     getStripePromise()
@@ -246,6 +292,7 @@ export default function App() {
         setLoadError(err instanceof Error ? err.message : "Failed to load Stripe");
         setStripeLoaded(true);
       });
+    loadData();
   }, []);
 
   return (
@@ -261,11 +308,11 @@ export default function App() {
 
       {stripeLoaded && stripeObj && (
         <Elements stripe={stripeObj}>
-          <CheckoutForm />
+          <CheckoutForm orders={orders} onPaymentComplete={loadData} />
         </Elements>
       )}
 
-      <PaymentLookup />
+      <PaymentLookup payments={payments} />
     </div>
   );
 }

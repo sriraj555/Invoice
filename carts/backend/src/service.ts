@@ -25,7 +25,7 @@ export async function convertCurrency(
 ): Promise<ConvertedAmounts | null> {
   try {
     const targets = to.join(",");
-    const url = `https://api.frankfurter.dev/latest?amount=${amount}&from=${from.toUpperCase()}&to=${targets}`;
+    const url = `https://api.frankfurter.app/latest?amount=${amount}&from=${from.toUpperCase()}&to=${targets}`;
     const res = await fetch(url);
     if (!res.ok) return null;
     const data = (await res.json()) as { base: string; amount: number; rates: Record<string, number> };

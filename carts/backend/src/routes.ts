@@ -9,6 +9,7 @@ import {
   getDiscountPercent,
   clearCart,
   updateProductInCarts,
+  getAllCarts,
 } from "./store";
 import { addCartItemSchema, updateCartItemSchema, applyDiscountSchema } from "./validation";
 import { fetchProduct, validatePaymentForCheckout, submitOrderFromCart, convertCurrency } from "./service";
@@ -18,6 +19,23 @@ const router = Router();
 function subtotal(items: Array<{ quantity: number; price?: number }>): number {
   return items.reduce((sum, i) => sum + (i.price ?? 0) * i.quantity, 0);
 }
+
+// List all carts (used by Orders frontend to select cart)
+router.get("/cart/all", (_req: Request, res: Response) => {
+  const carts = getAllCarts();
+  const result = carts.map((c) => {
+    const sub = subtotal(c.items);
+    const discount = c.discountPercent ? (sub * c.discountPercent) / 100 : 0;
+    return {
+      id: c.id,
+      userId: c.userId,
+      itemCount: c.items.reduce((s, i) => s + i.quantity, 0),
+      total: Math.max(0, sub - discount),
+      updatedAt: c.updatedAt,
+    };
+  });
+  res.json(result);
+});
 
 router.get("/cart/:cartId", (req: Request, res: Response) => {
   const cart = getCart(req.params.cartId);

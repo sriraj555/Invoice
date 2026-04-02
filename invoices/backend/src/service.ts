@@ -28,3 +28,38 @@ export async function enrichOrderItemsWithProductInfo(
   }
   return result;
 }
+
+// --- Public API: QR Code Generation (api.qrserver.com) ---
+export interface QrCodeResult {
+  qrCodeUrl: string;
+  invoiceId: string;
+  data: string;
+}
+
+export async function generateInvoiceQrCode(
+  invoiceId: string,
+  orderId: string,
+  amount: number,
+  currency: string
+): Promise<QrCodeResult> {
+  const data = JSON.stringify({
+    type: "INVOICE",
+    invoiceId,
+    orderId,
+    amount,
+    currency,
+    generatedAt: new Date().toISOString(),
+  });
+  const encoded = encodeURIComponent(data);
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encoded}`;
+
+  // Verify the API is reachable by making a HEAD request
+  try {
+    const res = await fetch(qrCodeUrl, { method: "HEAD" });
+    if (!res.ok) throw new Error(`QR API returned ${res.status}`);
+  } catch {
+    // API unreachable, still return URL (browser can try directly)
+  }
+
+  return { qrCodeUrl, invoiceId, data };
+}
